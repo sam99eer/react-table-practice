@@ -1,35 +1,111 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import {
+    ColumnDef,
+    flexRender,
+    getCoreRowModel,
+    getPaginationRowModel,
+    useReactTable,
+} from '@tanstack/react-table';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 
-function App() {
-  const [count, setCount] = useState(0)
+type IApiRow = {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    gender: string;
+    ip_address: string;
+};
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+const App = () => {
+    const [data, setData] = useState<IApiRow[]>([]);
 
-export default App
+    useEffect(() => {
+        (async function apiCall() {
+            if (data.length < 1) {
+                const url = await axios.get('http://localhost:3000/data');
+                const apiData: IApiRow[] = url.data;
+                setData(apiData);
+            }
+        })();
+    }, []);
+
+    const columns: ColumnDef<IApiRow>[] = [
+        {
+            accessorKey: 'id',
+            header: 'ID',
+        },
+        {
+            accessorKey: 'first_name',
+            header: 'First Name',
+        },
+    ];
+
+    const table = useReactTable({
+        columns,
+        data,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+    });
+
+    return (
+        <div className='w3-container'>
+            <table className='w3-table-all'>
+                <thead>
+                    {table.getHeaderGroups().map((item, index) => (
+                        <tr key={index}>
+                            {item.headers.map((subItem) => (
+                                <th key={subItem.id}>
+                                    {flexRender(
+                                        subItem.column.columnDef.header,
+                                        subItem.getContext()
+                                    )}
+                                </th>
+                            ))}
+                        </tr>
+                    ))}
+                </thead>
+                <tbody>
+                    {table.getRowModel().rows.map((item) => (
+                        <tr key={item.id}>
+                            {item.getVisibleCells().map((subItem) => (
+                                <td key={subItem.id}>
+                                    {flexRender(
+                                        subItem.column.columnDef.cell,
+                                        subItem.getContext()
+                                    )}
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                    <button onClick={() => table.setPageIndex(0)}>
+                        First Page
+                    </button>
+                    <button
+                        disabled={!table.getCanPreviousPage()}
+                        onClick={table.previousPage}
+                    >
+                        Prev Page
+                    </button>
+                    <button
+                        disabled={!table.getCanNextPage()}
+                        onClick={table.nextPage}
+                    >
+                        Next Page
+                    </button>
+                    <button
+                        onClick={() =>
+                            table.setPageIndex(table.getPageCount() - 1)
+                        }
+                    >
+                        Last Page
+                    </button>
+                    {table.getState().pagination.pageIndex + 1}-
+                    {table.getPageCount()}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+export default App;
